@@ -1,4 +1,4 @@
 namespace foo
 {
-    const char* IMAGE[] = #embed "stairs.pdf";
+    const char* PDF_DATA[] = #embed "stairs.pdf";
 }

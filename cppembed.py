@@ -162,13 +162,14 @@ def process_template(file, search_paths, line_width):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--stdin", action="store_const", const=True,
-                    help="Read input from stdin")
+                    help="Read input from stdin instead of [FILE].")
     ap.add_argument("-w", "--width", metavar="COLS", default=78, type=int,
-                    help="Set the line width. Default is 78.")
+                    help="Set the line width. Defaults to 78.")
     ap.add_argument("-i", "--include", metavar="PATH", action="append",
-                    help="Add a include path.")
+                    help="Add PATH to the list of paths where the program will"
+                         " look for the embedded files.")
     ap.add_argument("file", metavar="FILE", nargs="?",
-                    help="A file that will be encoded as a C char array")
+                    help="A C or C++ file with #embed directives.")
     args = ap.parse_args()
     if (not args.file) == (not args.stdin):
         ap.error("Must either specify FILE or --stdin")
