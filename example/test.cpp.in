@@ -1,0 +1,4 @@
+namespace foo
+{
+    const char* IMAGE[] = #embed "stairs.pdf";
+}
