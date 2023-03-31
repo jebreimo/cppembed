@@ -12,19 +12,20 @@ import os
 import re
 import sys
 
+SPECIAL_ESCAPES = {
+    0x07: "\\a",
+    0x08: "\\b",
+    0x09: "\\t",
+    0x0A: "\\n",
+    0x0B: "\\v",
+    0x0C: "\\f",
+    0x0D: "\\r",
+    0x22: '\\"',
+    0x5C: "\\\\"
+}
+
 
 def get_string_literal(byte, next_byte):
-    SPECIAL_ESCAPES = {
-        0x07: "\\a",
-        0x08: "\\b",
-        0x09: "\\t",
-        0x0A: "\\n",
-        0x0B: "\\v",
-        0x0C: "\\f",
-        0x0D: "\\r",
-        0x22: '\\"',
-        0x5C: "\\\\"
-    }
     if byte >= 0x7F:
         return "\\%03o" % byte
     if byte in SPECIAL_ESCAPES:
@@ -37,18 +38,26 @@ def get_string_literal(byte, next_byte):
     return chr(byte)
 
 
-class LineBuilder:
+class LineStuffer:
+    """
+    Builds lines of text from the strings added with the `add` method.
+    The resulting lines will be as long as possible within the limit set by
+    the `line_width` argument.
+    """
     def __init__(self, line_width=78, first_prefix="", prefix="",
-                 suffix="", last_suffix="", separator="", output=None):
+                 suffix="\n", last_suffix="\n", separator="", output_func=None):
         self._line_width = line_width
         self._first_prefix = first_prefix
         self._prefix = first_prefix
         self._suffix = suffix
         self._last_suffix = last_suffix
         self._separator = separator
-        self._output = output or (lambda s: sys.stdout.write(s + "\n"))
+        self._output_func = output_func or sys.stdout.write
+
         self._next_prefix = prefix
         self._words = []
+        self._min_suffix_len = min(len(self._last_suffix.rstrip("\n")),
+                                   len(self._suffix.rstrip("\n")))
 
     def _get_width_of_candidates(self):
         if not self._words:
@@ -67,7 +76,7 @@ class LineBuilder:
                 line_width += width
             else:
                 line.append(self._suffix)
-                self._output("".join(line))
+                self._output_func("".join(line))
                 self._prefix = self._next_prefix
                 self._words = self._words[i:]
                 break
@@ -81,7 +90,7 @@ class LineBuilder:
             return
 
         width = len(self._prefix) + self._get_width_of_candidates()
-        if width + min(len(self._last_suffix), len(self._suffix)) > self._line_width:
+        if width + self._min_suffix_len > self._line_width:
             self._write_line()
 
     def end(self):
@@ -104,7 +113,7 @@ class LineBuilder:
                 line.append(self._separator)
                 line.append(word)
         line.append(self._last_suffix)
-        self._output("".join(line))
+        self._output_func("".join(line))
         self._prefix = self._first_prefix
         self._words = []
 
@@ -119,7 +128,8 @@ def get_path(file_name, paths):
     return None
 
 
-def write_file_as_string(file_path, line_width, first_prefix, last_suffix):
+def write_file_as_string(file_path, line_width, first_prefix, last_suffix,
+                         output_func):
     if not first_prefix or first_prefix[-1] != '"':
         first_prefix += '"'
     if not last_suffix or last_suffix[0] != '"':
@@ -132,11 +142,12 @@ def write_file_as_string(file_path, line_width, first_prefix, last_suffix):
     else:
         prefix = "    "
 
-    lb = LineBuilder(line_width=line_width,
+    lb = LineStuffer(line_width=line_width,
                      first_prefix=first_prefix,
                      prefix=f"{prefix}\"",
-                     suffix="\"",
-                     last_suffix=last_suffix)
+                     suffix="\"\n",
+                     last_suffix=last_suffix,
+                     output_func=output_func)
     data = open(file_path, "rb").read()
     if data:
         for i in range(len(data) - 1):
@@ -145,7 +156,7 @@ def write_file_as_string(file_path, line_width, first_prefix, last_suffix):
     lb.end()
 
 
-def process_template(file, search_paths, line_width):
+def process_template(file, search_paths, line_width, output_func):
     rex = re.compile("""#embed *(<[^>]*>|"[^"]*")""")
     for line in file:
         match = rex.search(line)
@@ -154,9 +165,9 @@ def process_template(file, search_paths, line_width):
             if not file_path:
                 raise IOError(f"File not found: {file_path}")
             write_file_as_string(file_path, line_width, line[:match.start(0)],
-                                 line[match.end(0):-1])
+                                 line[match.end(0):], output_func)
         else:
-            sys.stdout.write(line)
+            output_func(line)
 
 
 def main():
@@ -164,10 +175,12 @@ def main():
     ap.add_argument("--stdin", action="store_const", const=True,
                     help="Read input from stdin instead of [FILE].")
     ap.add_argument("-w", "--width", metavar="COLS", default=78, type=int,
-                    help="Set the line width. Defaults to 78.")
+                    help="Set the line width. Default is 78.")
     ap.add_argument("-i", "--include", metavar="PATH", action="append",
                     help="Add PATH to the list of paths where the program will"
                          " look for the embedded files.")
+    ap.add_argument("-o", "--output", metavar="PATH",
+                    help="Set the name of the output file. Default is stdout.")
     ap.add_argument("file", metavar="FILE", nargs="?",
                     help="A C or C++ file with #embed directives.")
     args = ap.parse_args()
@@ -182,8 +195,11 @@ def main():
 
     include_dirs.append(os.path.curdir)
 
+    output_file = open(args.output, "w") if args.output else sys.stdout
+
     try:
-        process_template(input_file, include_dirs, args.width)
+        process_template(input_file, include_dirs, args.width,
+                         output_file.write)
     except IOError as ex:
         print(ex)
         return 1
