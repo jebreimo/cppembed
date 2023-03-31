@@ -5,6 +5,7 @@ This script reads a C++ file and replaces all #embed directives it finds with th
 ## Example:
 
 The input file, `pdf_data.cpp.in`:
+
 ```c++
 namespace foo
 {
@@ -12,12 +13,16 @@ namespace foo
 }
 ```
 
+is stored in the same folder a PDF file named `stairs.pdf`.
+
 Running the command:
+
 ```
-$ cppembed pdf_data.cpp.in > pdf_data.cpp
+$ cppembed pdf_data.cpp.in -o pdf_data.cpp
 ```
 
-Results in the output file, `pdf_data.cpp`:
+results in the output file `pdf_data.cpp`:
+
 ```c++
 namespace foo
 {
