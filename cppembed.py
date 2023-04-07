@@ -195,7 +195,13 @@ def main():
 
     include_dirs.append(os.path.curdir)
 
-    output_file = open(args.output, "w") if args.output else sys.stdout
+    if args.output:
+        dir_name = os.path.dirname(args.output)
+        if not os.path.exists(dir_name):
+            os.makedirs(dir_name)
+        output_file = open(args.output, "w")
+    else:
+        output_file = sys.stdout
 
     try:
         process_template(input_file, include_dirs, args.width,
