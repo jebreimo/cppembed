@@ -24,8 +24,18 @@ SPECIAL_ESCAPES = {
     0x5C: "\\\\"
 }
 
+TRIGRAPH_PREFIX = [ord("?"), ord("?")]
+TRIGRAPH_SUFFIXES = set(b"=/'()!<>-")
 
-def get_string_literal(byte, next_byte):
+
+def get_octal_literal(byte, next_byte):
+    if 0x30 <= next_byte <= 0x37:
+        return "\\%03o" % byte
+    else:
+        return "\\%o" % byte
+
+
+def get_char_literal(byte, next_byte):
     if byte >= 0x7F:
         return "\\%03o" % byte
     if byte in SPECIAL_ESCAPES:
@@ -118,6 +128,20 @@ class LineStuffer:
         self._words = []
 
 
+class Encoder:
+    def __init__(self):
+        self._prefix = [0, 0]
+        self._i = 0
+
+    def encode(self, byte, next_byte):
+        ch = get_char_literal(byte, next_byte)
+        if byte in TRIGRAPH_SUFFIXES and self._prefix == TRIGRAPH_PREFIX:
+            ch = get_octal_literal(byte, next_byte)
+        self._prefix[self._i % 2] = byte
+        self._i += 1
+        return ch
+
+
 def get_path(file_name, paths):
     if os.path.exists(file_name):
         return file_name
@@ -142,18 +166,19 @@ def write_file_as_string(file_path, line_width, first_prefix, last_suffix,
     else:
         prefix = "    "
 
-    lb = LineStuffer(line_width=line_width,
+    ls = LineStuffer(line_width=line_width,
                      first_prefix=first_prefix,
                      prefix=f"{prefix}\"",
                      suffix="\"\n",
                      last_suffix=last_suffix,
                      output_func=output_func)
+    encoder = Encoder()
     data = open(file_path, "rb").read()
     if data:
         for i in range(len(data) - 1):
-            lb.add(get_string_literal(data[i], data[i + 1]))
-        lb.add(get_string_literal(data[-1], 0))
-    lb.end()
+            ls.add(encoder.encode(data[i], data[i+1]))
+        ls.add(encoder.encode(data[-1], 0))
+    ls.end()
 
 
 def process_template(file, search_paths, line_width, output_func):
