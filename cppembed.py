@@ -163,7 +163,7 @@ def process_template(file, search_paths, line_width, output_func):
         if match:
             file_path = get_path(match.group(1)[1:-1], search_paths)
             if not file_path:
-                raise IOError(f"File not found: {file_path}")
+                raise IOError(f"File not found: {match.group(1)[1:-1]}")
             write_file_as_string(file_path, line_width, line[:match.start(0)],
                                  line[match.end(0):], output_func)
         else:
