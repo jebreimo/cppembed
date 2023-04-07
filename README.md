@@ -13,7 +13,7 @@ namespace foo
 }
 ```
 
-is stored in the same folder a PDF file named `stairs.pdf`.
+is stored in the same folder as a PDF file named `stairs.pdf`.
 
 Running the command:
 
