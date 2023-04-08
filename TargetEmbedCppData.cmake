@@ -38,7 +38,6 @@ function(target_embed_cpp_data target_name)
         set(OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/cppembed_include/${INPUT_NAME}")
         get_property(SCRIPT_DIR GLOBAL PROPERTY cppembed_cmake_module_dir)
         set(SCRIPT_PATH ${SCRIPT_DIR}/cppembed.py)
-        message("${Python3_EXECUTABLE} ${SCRIPT_PATH} ${INCLUDE_OPTIONS} ${REAL_INPUT_PATH} -o ${OUTPUT_PATH}")
         add_custom_command(OUTPUT "${OUTPUT_PATH}"
             COMMAND "${Python3_EXECUTABLE}" ${SCRIPT_PATH} ${INCLUDE_OPTIONS} "${REAL_INPUT_PATH}" -o "${OUTPUT_PATH}"
             DEPENDS "${REAL_INPUT_PATH}")
