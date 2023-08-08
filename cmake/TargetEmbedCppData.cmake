@@ -9,7 +9,7 @@ cmake_minimum_required(VERSION 3.13)
 
 set_property(GLOBAL
     PROPERTY
-        cppembed_cmake_module_dir "${CMAKE_CURRENT_LIST_DIR}")
+        cppembed_cmake_module_dir "..")
 
 function(target_embed_cpp_data target_name)
     find_package(Python3 COMPONENTS Interpreter REQUIRED)
