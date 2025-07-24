@@ -187,7 +187,7 @@ def write_file_as_string(file_path, line_width, first_prefix, last_suffix,
     data = open(file_path, "rb").read()
     for byte in data:
         s = encoder.encode(byte)
-        if ls.add(s) and 0x30 <= byte <= 0x39 and is_escaped_octal(s):
+        if ls.add(s) and 0x30 <= byte <= 0x37 and is_escaped_octal(s):
             ls.replace_previous_word(chr(byte))
             encoder.preceded_by_octal = False
     ls.end()
