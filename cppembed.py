@@ -35,7 +35,7 @@ def get_char_literal(byte, preceded_by_octal: bool) -> str:
         return SPECIAL_ESCAPES[byte]
     if byte < 0x20:
         return "\\%o" % byte
-    if preceded_by_octal and 0x30 <= byte <= 0x37:
+    if preceded_by_octal and 0x30 <= byte <= 0x39:
         return "\\%o" % byte
     return chr(byte)
 
@@ -134,7 +134,7 @@ class LineStuffer:
 
 def unescape_digits(words: list[str]) -> bool:
     for i in range(len(words)):
-        if "\\60" <= words[i] <= "\\67":
+        if "\\60" <= words[i] <= "\\69":
             words[i] = chr(int(words[i][1:], 8))
         else:
             return False
