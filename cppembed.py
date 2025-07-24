@@ -28,23 +28,15 @@ TRIGRAPH_PREFIX = [ord("?"), ord("?")]
 TRIGRAPH_SUFFIXES = set(b"=/'()!<>-")
 
 
-def get_octal_literal(byte, next_byte):
-    if 0x30 <= next_byte <= 0x37:
-        return "\\%03o" % byte
-    else:
-        return "\\%o" % byte
-
-
-def get_char_literal(byte, next_byte):
+def get_char_literal(byte, preceded_by_octal: bool) -> str:
     if byte >= 0x7F:
         return "\\%03o" % byte
     if byte in SPECIAL_ESCAPES:
         return SPECIAL_ESCAPES[byte]
     if byte < 0x20:
-        if 0x30 <= next_byte <= 0x37:
-            return "\\%03o" % byte
-        else:
-            return "\\%o" % byte
+        return "\\%o" % byte
+    if preceded_by_octal and 0x30 <= byte <= 0x37:
+        return "\\%o" % byte
     return chr(byte)
 
 
@@ -91,17 +83,20 @@ class LineStuffer:
                 self._words = self._words[i:]
                 break
 
-    def add(self, s):
+    def add(self, s) -> bool:
         if not s:
-            return
+            return False
 
         self._words.append(s)
         if len(self._words) == 1:
-            return
+            return False
 
         width = len(self._prefix) + self._get_width_of_candidates()
         if width + self._min_suffix_len > self._line_width:
             self._write_line()
+            return True
+
+        return False
 
     def end(self):
         while len(self._words) > 1:
@@ -127,18 +122,34 @@ class LineStuffer:
         self._prefix = self._first_prefix
         self._words = []
 
+    def replace_previous_word(self, s):
+        if self._words:
+            self._words[-1] = s
+
+
+def is_escaped_octal(string):
+    """
+    Returns True if the string ends with an octal escape sequence.
+    """
+    if not string or string[0] != "\\":
+        return False
+    return all(c.isdigit() for c in string[1:])
+
 
 class Encoder:
     def __init__(self):
         self._prefix = [0, 0]
         self._i = 0
+        self.preceded_by_octal = False
 
-    def encode(self, byte, next_byte):
-        ch = get_char_literal(byte, next_byte)
+    def encode(self, byte):
         if byte in TRIGRAPH_SUFFIXES and self._prefix == TRIGRAPH_PREFIX:
-            ch = get_octal_literal(byte, next_byte)
+            ch = "\\%o" % byte
+        else:
+            ch = get_char_literal(byte, self.preceded_by_octal)
         self._prefix[self._i % 2] = byte
         self._i += 1
+        self.preceded_by_octal = is_escaped_octal(ch)
         return ch
 
 
@@ -174,10 +185,11 @@ def write_file_as_string(file_path, line_width, first_prefix, last_suffix,
                      output_func=output_func)
     encoder = Encoder()
     data = open(file_path, "rb").read()
-    if data:
-        for i in range(len(data) - 1):
-            ls.add(encoder.encode(data[i], data[i+1]))
-        ls.add(encoder.encode(data[-1], 0))
+    for byte in data:
+        s = encoder.encode(byte)
+        if ls.add(s) and 0x30 <= byte <= 0x39 and is_escaped_octal(s):
+            ls.replace_previous_word(chr(byte))
+            encoder.preceded_by_octal = False
     ls.end()
 
 
