@@ -40,6 +40,15 @@ def get_char_literal(byte, preceded_by_octal: bool) -> str:
     return chr(byte)
 
 
+def is_escaped_octal(string):
+    """
+    Returns True if the string ends with an octal escape sequence.
+    """
+    if not string or string[0] != "\\":
+        return False
+    return all(c.isdigit() for c in string[1:])
+
+
 class LineStuffer:
     """
     Builds lines of text from the strings added with the `add` method.
@@ -57,38 +66,38 @@ class LineStuffer:
         self._output_func = output_func or sys.stdout.write
 
         self._next_prefix = prefix
-        self._words = []
+        self.words = []
         self._min_suffix_len = min(len(self._last_suffix.rstrip("\n")),
                                    len(self._suffix.rstrip("\n")))
 
     def _get_width_of_candidates(self):
-        if not self._words:
+        if not self.words:
             return 0
-        return (sum(len(s) for s in self._words)
-                + (len(self._words) - 1) * len(self._separator))
+        return (sum(len(s) for s in self.words)
+                + (len(self.words) - 1) * len(self._separator))
 
     def _write_line(self):
-        line = [self._prefix, self._words[0]]
-        line_width = sum(len(s) for s in line) + len(self._suffix)
-        for i in range(1, len(self._words)):
-            width = len(self._separator) + len(self._words[i])
+        line = [self._prefix, self.words[0]]
+        line_width = sum(len(s) for s in line) + len(self._suffix.rstrip("\n"))
+        for i in range(1, len(self.words)):
+            width = len(self._separator) + len(self.words[i])
             if line_width + width < self._line_width:
                 line.append(self._separator)
-                line.append(self._words[i])
+                line.append(self.words[i])
                 line_width += width
             else:
                 line.append(self._suffix)
                 self._output_func("".join(line))
                 self._prefix = self._next_prefix
-                self._words = self._words[i:]
+                self.words = self.words[i:]
                 break
 
     def add(self, s) -> bool:
         if not s:
             return False
 
-        self._words.append(s)
-        if len(self._words) == 1:
+        self.words.append(s)
+        if len(self.words) == 1:
             return False
 
         width = len(self._prefix) + self._get_width_of_candidates()
@@ -99,7 +108,7 @@ class LineStuffer:
         return False
 
     def end(self):
-        while len(self._words) > 1:
+        while len(self.words) > 1:
             width = (len(self._prefix)
                      + self._get_width_of_candidates()
                      + len(self._last_suffix))
@@ -107,33 +116,29 @@ class LineStuffer:
             if width < self._line_width:
                 break
 
-            last_word = self._words.pop()
+            last_word = self.words.pop()
             self._write_line()
-            self._words.append(last_word)
+            self.words.append(last_word)
 
         line = [self._prefix]
-        if self._words:
-            line.append(self._words[0])
-            for word in self._words[1:]:
+        if self.words:
+            line.append(self.words[0])
+            for word in self.words[1:]:
                 line.append(self._separator)
                 line.append(word)
         line.append(self._last_suffix)
         self._output_func("".join(line))
         self._prefix = self._first_prefix
-        self._words = []
-
-    def replace_previous_word(self, s):
-        if self._words:
-            self._words[-1] = s
+        self.words = []
 
 
-def is_escaped_octal(string):
-    """
-    Returns True if the string ends with an octal escape sequence.
-    """
-    if not string or string[0] != "\\":
-        return False
-    return all(c.isdigit() for c in string[1:])
+def unescape_digits(words: list[str]) -> bool:
+    for i in range(len(words)):
+        if "\\60" <= words[i] <= "\\67":
+            words[i] = chr(int(words[i][1:], 8))
+        else:
+            return False
+    return True
 
 
 class Encoder:
@@ -186,9 +191,7 @@ def write_file_as_string(file_path, line_width, first_prefix, last_suffix,
     encoder = Encoder()
     data = open(file_path, "rb").read()
     for byte in data:
-        s = encoder.encode(byte)
-        if ls.add(s) and 0x30 <= byte <= 0x37 and is_escaped_octal(s):
-            ls.replace_previous_word(chr(byte))
+        if ls.add(encoder.encode(byte)) and unescape_digits(ls.words):
             encoder.preceded_by_octal = False
     ls.end()
 
