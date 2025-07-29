@@ -134,7 +134,7 @@ class LineStuffer:
 
 def unescape_digits(words: list[str]) -> bool:
     for i in range(len(words)):
-        if "\\60" <= words[i] <= "\\69":
+        if "\\60" <= words[i] <= "\\71":
             words[i] = chr(int(words[i][1:], 8))
         else:
             return False
