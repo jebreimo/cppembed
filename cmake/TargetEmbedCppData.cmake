@@ -38,9 +38,14 @@ function(target_embed_cpp_data target_name)
         set(OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/cppembed_include/${INPUT_NAME}")
         get_property(SCRIPT_DIR GLOBAL PROPERTY cppembed_cmake_module_dir)
         set(SCRIPT_PATH ${SCRIPT_DIR}/cppembed.py)
+
+        execute_process(COMMAND "${Python3_EXECUTABLE}" ${SCRIPT_PATH} ${INCLUDE_OPTIONS} "${REAL_INPUT_PATH}" --list-files
+            OUTPUT_VARIABLE DEP_FILES
+            OUTPUT_STRIP_TRAILING_WHITESPACE)
+
         add_custom_command(OUTPUT "${OUTPUT_PATH}"
             COMMAND "${Python3_EXECUTABLE}" ${SCRIPT_PATH} ${INCLUDE_OPTIONS} "${REAL_INPUT_PATH}" -o "${OUTPUT_PATH}"
-            DEPENDS "${REAL_INPUT_PATH}")
+            DEPENDS "${REAL_INPUT_PATH}" ${DEP_FILES})
         list(APPEND OUTPUT_FILES "${OUTPUT_PATH}")
     endforeach ()
 

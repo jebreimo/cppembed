@@ -210,6 +210,15 @@ def process_template(file, search_paths, line_width, output_func):
             output_func(line)
 
 
+def list_files(file, search_paths, line_width, output_func):
+    rex = re.compile("""#embed *(<[^>]*>|"[^"]*")""")
+    for line in file:
+        match = rex.search(line)
+        if match:
+            if file_path := get_path(match.group(1)[1:-1], search_paths):
+                output_func(file_path + "\n")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--stdin", action="store_const", const=True,
@@ -217,10 +226,13 @@ def main():
     ap.add_argument("-w", "--width", metavar="COLS", default=78, type=int,
                     help="Set the line width. Default is 78.")
     ap.add_argument("-i", "--include", metavar="PATH", action="append",
-                    help="Add PATH to the list of paths where the program will"
-                         " look for the embedded files.")
+                    help="Add PATH to the list of paths where the program looks"
+                         " for embedded files.")
     ap.add_argument("-o", "--output", metavar="PATH",
                     help="Set the name of the output file. Default is stdout.")
+    ap.add_argument("--list-files", action="store_const", const=True,
+                    help="List the files that would be embedded, but do not"
+                         " output the actual C/C++ code.")
     ap.add_argument("file", metavar="FILE", nargs="?",
                     help="A C or C++ file with #embed directives.")
     args = ap.parse_args()
@@ -244,8 +256,12 @@ def main():
         output_file = sys.stdout
 
     try:
-        process_template(input_file, include_dirs, args.width,
-                         output_file.write)
+        if args.list_files:
+            list_files(input_file, include_dirs, args.width,
+                       output_file.write)
+        else:
+            process_template(input_file, include_dirs, args.width,
+                             output_file.write)
     except IOError as ex:
         print(ex)
         return 1
