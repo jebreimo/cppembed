@@ -1,4 +1,6 @@
 namespace foo
 {
+    const char* TXT_DATA[] = #embed_text "lorem.txt";
+
     const char* PDF_DATA[] = #embed "stairs.pdf";
 }

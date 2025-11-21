@@ -76,21 +76,25 @@ class LineStuffer:
         return (sum(len(s) for s in self.words)
                 + (len(self.words) - 1) * len(self._separator))
 
-    def _write_line(self):
+    def _write_line(self, force=False):
         line = [self._prefix, self.words[0]]
         line_width = sum(len(s) for s in line) + len(self._suffix.rstrip("\n"))
+
+        complete_line = False
         for i in range(1, len(self.words)):
             width = len(self._separator) + len(self.words[i])
-            if line_width + width < self._line_width:
+            if line_width + width < self._line_width and not force :
                 line.append(self._separator)
                 line.append(self.words[i])
                 line_width += width
             else:
-                line.append(self._suffix)
-                self._output_func("".join(line))
-                self._prefix = self._next_prefix
-                self.words = self.words[i:]
+                complete_line = True
                 break
+        if complete_line or force:
+            line.append(self._suffix)
+            self._output_func("".join(line))
+            self._prefix = self._next_prefix
+            self.words = []
 
     def add(self, s) -> bool:
         if not s:
@@ -117,7 +121,7 @@ class LineStuffer:
                 break
 
             last_word = self.words.pop()
-            self._write_line()
+            self._write_line(True)
             self.words.append(last_word)
 
         line = [self._prefix]
@@ -169,7 +173,7 @@ def get_path(file_name, paths):
 
 
 def write_file_as_string(file_path, line_width, first_prefix, last_suffix,
-                         output_func):
+                         output_func, fix_newlines=False):
     if not first_prefix or first_prefix[-1] != '"':
         first_prefix += '"'
     if not last_suffix or last_suffix[0] != '"':
@@ -190,32 +194,36 @@ def write_file_as_string(file_path, line_width, first_prefix, last_suffix,
                      output_func=output_func)
     encoder = Encoder()
     data = open(file_path, "rb").read()
+    if fix_newlines:
+        data = data.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
     for byte in data:
         if ls.add(encoder.encode(byte)) and unescape_digits(ls.words):
             encoder.preceded_by_octal = False
     ls.end()
 
 
+REGEX = re.compile("""#embed(_text)? *(<[^>]*>|"[^"]*")""")
+
+
 def process_template(file, search_paths, line_width, output_func):
-    rex = re.compile("""#embed *(<[^>]*>|"[^"]*")""")
     for line in file:
-        match = rex.search(line)
+        match = REGEX.search(line)
         if match:
-            file_path = get_path(match.group(1)[1:-1], search_paths)
+            file_path = get_path(match.group(2)[1:-1], search_paths)
             if not file_path:
-                raise IOError(f"File not found: {match.group(1)[1:-1]}")
+                raise IOError(f"File not found: {match.group(2)[1:-1]}")
             write_file_as_string(file_path, line_width, line[:match.start(0)],
-                                 line[match.end(0):], output_func)
+                                 line[match.end(0):], output_func,
+                                 match.group(1) == "_text")
         else:
             output_func(line)
 
 
 def list_files(file, search_paths, line_width, output_func):
-    rex = re.compile("""#embed *(<[^>]*>|"[^"]*")""")
     for line in file:
-        match = rex.search(line)
+        match = REGEX.search(line)
         if match:
-            if file_path := get_path(match.group(1)[1:-1], search_paths):
+            if file_path := get_path(match.group(2)[1:-1], search_paths):
                 output_func(file_path + "\n")
 
 
