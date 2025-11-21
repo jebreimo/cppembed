@@ -180,8 +180,11 @@ def write_file_as_string(file_path, line_width, first_prefix, last_suffix,
         last_suffix = '"' + last_suffix
 
     for i in range(len(first_prefix)):
-        if not first_prefix[i].isspace():
-            prefix = first_prefix[:i] * 2
+        if first_prefix[i] == '"' and i == len(first_prefix) - 1:
+            prefix = first_prefix[:i]
+            break
+        elif not first_prefix[i].isspace():
+            prefix = first_prefix[:i] + 4 * " "
             break
     else:
         prefix = "    "
