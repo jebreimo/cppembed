@@ -4,6 +4,8 @@ This script reads a C++ file and replaces all #embed directives it finds with th
 
 ## Example:
 
+### Running cppembed.py from the commandline
+
 The input file, `pdf_data.cpp.in`:
 
 ```c++
@@ -36,6 +38,43 @@ namespace foo
         "] >>\nstartxref\n2081\n%%EOF\n";
 }
 ```
+
+### Using cppembed with CMake
+
+First, create a file that contains the `#embed` directives, e.g. `pdf_data.cpp.in` as shown
+above. Then, in your `CMakeLists.txt`, fetch `cppembed` from the main repository:
+
+```cmake
+include(FetchContent)
+FetchContent_Declare(cppembed
+    GIT_REPOSITORY "https://github.com/jebreimo/cppembed.git"
+    GIT_TAG "v0.1.8"
+)
+FetchContent_MakeAvailable(cppembed)
+```
+
+Add the folder containing the file with the `target_embed_cpp_data` CMake function to the module
+path and include it:
+
+```cmake
+list(APPEND CMAKE_MODULE_PATH ${cppembed_SOURCE_DIR}/cmake)
+
+include(TargetEmbedCppData)
+```
+
+After defining the target that uses the embedded files, add the embedding step:
+
+```cmake
+add_executable(my_app main.cpp pdf_data.cpp)
+
+target_embed_cpp_data(my_app
+    FILES
+        pdf_data.cpp.in
+)
+```
+
+The next time the project is built, the `pdf_data.cpp` will be created and can be included by
+one of the target's regular source files.
 
 ## Encoding
 
