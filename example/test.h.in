@@ -1,0 +1,9 @@
+#pragma once
+#include <string>
+
+namespace foo
+{
+    const std::string TXT_DATA = #embed "lorem.txt";
+
+    const std::string PDF_DATA = #embed "stairs.pdf";
+}
