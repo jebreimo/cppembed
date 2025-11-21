@@ -41,21 +41,26 @@ function(target_embed_cpp_data target_name)
 
         execute_process(COMMAND "${Python3_EXECUTABLE}" ${SCRIPT_PATH} ${INCLUDE_OPTIONS} "${REAL_INPUT_PATH}" --list-files
             OUTPUT_VARIABLE DEP_FILES
-            OUTPUT_STRIP_TRAILING_WHITESPACE)
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+
+        string(REPLACE "\n" ";" DEP_FILES "${DEP_FILES}")
 
         add_custom_command(OUTPUT "${OUTPUT_PATH}"
             COMMAND "${Python3_EXECUTABLE}" ${SCRIPT_PATH} ${INCLUDE_OPTIONS} "${REAL_INPUT_PATH}" -o "${OUTPUT_PATH}"
-            DEPENDS "${REAL_INPUT_PATH}" ${DEP_FILES})
+            DEPENDS "${REAL_INPUT_PATH}" ${DEP_FILES}
+        )
         list(APPEND OUTPUT_FILES "${OUTPUT_PATH}")
     endforeach ()
 
     add_custom_target(${target_name}_EmbeddedHeaders ALL
-        DEPENDS ${OUTPUT_FILES})
+        DEPENDS ${OUTPUT_FILES}
+    )
 
     add_dependencies(${target_name} ${target_name}_EmbeddedHeaders)
 
     target_include_directories(${target_name} BEFORE
         PRIVATE
             $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/cppembed_include>
-        )
+    )
 endfunction()
