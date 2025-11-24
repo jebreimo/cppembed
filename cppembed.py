@@ -81,6 +81,7 @@ class LineStuffer:
         line_width = sum(len(s) for s in line) + len(self._suffix.rstrip("\n"))
 
         complete_line = False
+        i = 0
         for i in range(1, len(self.words)):
             width = len(self._separator) + len(self.words[i])
             if line_width + width < self._line_width and not force :
@@ -94,7 +95,7 @@ class LineStuffer:
             line.append(self._suffix)
             self._output_func("".join(line))
             self._prefix = self._next_prefix
-            self.words = []
+            self.words = self.words[i:]
 
     def add(self, s) -> bool:
         if not s:
