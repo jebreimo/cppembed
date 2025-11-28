@@ -1,0 +1,6 @@
+#include <string>
+
+namespace foo
+{
+    extern const std::string PDF_DATA = #embed "../data/stairs.pdf";
+}

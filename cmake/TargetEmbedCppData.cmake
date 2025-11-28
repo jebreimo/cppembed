@@ -11,6 +11,11 @@ set_property(GLOBAL
     PROPERTY
         cppembed_cmake_module_dir "${CMAKE_CURRENT_LIST_DIR}/..")
 
+function(create_unique_target_name parent_target_name context temp_target_name)
+    string(UUID _TEMP_NAME NAMESPACE 00000000-0000-0000-0000-000000000000 NAME "${parent_target_name}:${context}" TYPE SHA1)
+    set(${temp_target_name} "${target_name}_${_TEMP_NAME}" PARENT_SCOPE)
+endfunction()
+
 function(target_embed_cpp_data target_name)
     find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
@@ -28,6 +33,7 @@ function(target_embed_cpp_data target_name)
         set(FILE_EXTENSION ".h")
     endif ()
 
+    set(ADD_INCLUDE_DIR OFF)
     foreach (INPUT_PATH IN LISTS ARG_FILES)
         file(REAL_PATH "${INPUT_PATH}" REAL_INPUT_PATH)
         get_filename_component(INPUT_EXTENSION ${INPUT_PATH} LAST_EXT)
@@ -51,16 +57,30 @@ function(target_embed_cpp_data target_name)
             DEPENDS "${REAL_INPUT_PATH}" ${DEP_FILES}
         )
         list(APPEND OUTPUT_FILES "${OUTPUT_PATH}")
+        get_filename_component(OUTPUT_EXTENSION ${OUTPUT_PATH} LAST_EXT)
+        message(STATUS "Output extension: ${OUTPUT_EXTENSION}")
+        string(REGEX MATCH ".*\.[cC][+cCpP]*$" IS_CPP_FILE "${OUTPUT_EXTENSION}")
+        if (IS_CPP_FILE)
+            message(STATUS "Adding source to ${target_name}: ${OUTPUT_PATH}")
+            target_sources(${target_name} PRIVATE "${OUTPUT_PATH}")
+        else ()
+            set(ADD_INCLUDE_DIR ON)
+        endif ()
     endforeach ()
 
-    add_custom_target(${target_name}_EmbeddedHeaders ALL
+    create_unique_target_name(${target_name} "${OUTPUT_FILES}" temp_target_name)
+    add_custom_target(${temp_target_name} ALL
         DEPENDS ${OUTPUT_FILES}
     )
 
-    add_dependencies(${target_name} ${target_name}_EmbeddedHeaders)
+    add_dependencies(${target_name} ${temp_target_name})
 
-    target_include_directories(${target_name} BEFORE
-        PRIVATE
-            $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/cppembed_include>
-    )
+    if (ADD_INCLUDE_DIR)
+        set(INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/cppembed_include")
+        message(STATUS "Adding include dir to ${target_name}: ${INCLUDE_DIR}")
+        target_include_directories(${target_name} BEFORE
+            PRIVATE
+                $<BUILD_INTERFACE:${INCLUDE_DIR}>
+        )
+    endif ()
 endfunction()

@@ -1,5 +1,6 @@
 #include <iostream>
-#include "test.h"
+#include "pdf_data.hpp"
+#include "txt_data.hpp"
 
 int main()
 {

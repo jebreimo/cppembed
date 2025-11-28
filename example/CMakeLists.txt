@@ -1,15 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
-project(ExampleProject)
+project(Examples)
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/../cmake")
+add_subdirectory(as_cpp_file)
+add_subdirectory(as_hpp_files)
 
-include(TargetEmbedCppData)
-
-add_executable(ExampleApp
-    test.cpp
-)
-
-target_embed_cpp_data(ExampleApp
-    FILES
-        test.h.in
-)

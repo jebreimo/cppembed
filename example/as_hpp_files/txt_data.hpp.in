@@ -1,0 +1,6 @@
+#include <string>
+
+namespace foo
+{
+    extern const std::string TXT_DATA = #embed_text "../data/lorem.txt";
+}

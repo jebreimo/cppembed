@@ -1,0 +1,13 @@
+#include <string>
+
+namespace foo
+{
+    extern const std::string TXT_DATA = #embed_text "lorem.txt";
+
+    extern const std::string PDF_DATA = #embed "stairs.pdf";
+
+    extern const std::string ARR_DATA[2] = {
+        #embed_text "lorem.txt",
+        #embed "stairs.pdf"
+    };
+}
